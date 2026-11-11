@@ -466,7 +466,7 @@ export default function App() {
                   onClick={() => { setActiveTab(tab.id); setIsMobileMenuOpen(false); }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-all ${
                     activeTab === tab.id 
-                      ? `${profile.activeBg}${profile.color} font-medium` 
+                      ? `${profile.activeBg} ${profile.color} font-medium` 
                       : 'text-stone-500 hover:bg-stone-50'
                   }`}
                 >
@@ -533,4 +533,259 @@ export default function App() {
             <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden text-stone-500 hover:text-stone-700 p-1 -ml-2">
               <Menu className="w-6 h-6" />
             </button>
-            <div className="flex items-center gap-2
+            <div className="flex items-center gap-2.5 text-xl font-semibold text-stone-800">
+              <activeTabData.icon className={`w-6 h-6 ${activeTabData.type === 'shared' ? 'text-amber-500' : profile.color}`} />
+              <span>{t.tabs[activeTabData.id]}</span>
+            </div>
+          </div>
+
+          <button 
+            onClick={handleSendHug}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all shadow-2xs border border-rose-100 active:scale-95"
+          >
+            <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
+            <span className="text-sm font-medium hidden sm:block">{t.hug}</span>
+          </button>
+        </header>
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar">
+          <div className="max-w-3xl mx-auto pb-20">
+            {activeTab === 'ozbakim' ? (
+              <SelfCareBoard 
+                dailyCare={dailyCare} 
+                onToggleHabit={handleToggleHabit} 
+                onSetWater={handleSetWater} 
+                profile={profile} 
+                t={t}
+              />
+            ) : (
+              <ListBoard 
+                tasks={currentTasks} 
+                onAdd={handleAddTask} 
+                onToggle={handleToggleTask} 
+                onDelete={handleDeleteTask}
+                isShared={activeTabData.type === 'shared'}
+                profile={profile}
+                profiles={profiles}
+                t={t}
+                activeTab={activeTab}
+              />
+            )}
+          </div>
+        </div>
+      </main>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes float-up {
+          0% { transform: translateY(50px) scale(0.5) rotate(-10deg); opacity: 0; }
+          20% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+          80% { opacity: 1; }
+          100% { transform: translateY(-100vh) scale(1.5) rotate(20deg); opacity: 0; }
+        }
+        .animate-float-up {
+          animation: float-up forwards cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e7e5e4; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #d6d3d1; }
+      `}} />
+    </div>
+  );
+}
+
+// --- SUB-COMPONENTS ---
+
+function SelfCareBoard({ dailyCare, onToggleHabit, onSetWater, profile, t }) {
+  const maxWater = 8;
+  const currentWater = dailyCare.water || 0;
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      
+      {/* Habits Card */}
+      <div className="bg-white rounded-[2rem] p-6 sm:p-8 border border-stone-100 shadow-2xs text-center">
+        <h3 className="text-lg font-medium text-stone-800 mb-1">{t.dailyStepsTitle}</h3>
+        <p className="text-stone-400 text-sm mb-8">{t.dailyStepsSubtitle}</p>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+          {t.habits.map(habit => {
+            const isDone = !!dailyCare[habit.id];
+            const HabitIcon = habit.icon;
+            return (
+              <button
+                key={habit.id}
+                onClick={() => onToggleHabit(habit.id)}
+                className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${
+                  isDone 
+                    ? `${profile.bg} ${profile.border} ${profile.color}` 
+                    : 'bg-white border-stone-100 hover:border-stone-200 text-stone-600'
+                }`}
+              >
+                <div className={`shrink-0 ${isDone ? profile.color : 'text-stone-300'}`}>
+                  {isDone ? <CheckCircle2 className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
+                </div>
+                <span className={`flex-1 font-medium text-sm ${isDone ? '' : 'text-stone-600'}`}>
+                  {habit.label}
+                </span>
+                <HabitIcon className={`w-5 h-5 opacity-40`} />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Water Tracker Card */}
+      <div className="bg-white rounded-[2rem] p-6 sm:p-8 border border-stone-100 shadow-2xs text-center">
+        <h3 className="text-lg font-medium text-stone-800 mb-6 flex items-center justify-center gap-2">
+          <Droplets className="w-5 h-5 text-blue-400" /> {t.waterTracker}
+        </h3>
+        
+        <div className="flex flex-wrap justify-center gap-3">
+          {[...Array(maxWater)].map((_, i) => (
+            <button
+              key={i}
+              onClick={() => onSetWater(currentWater === i + 1 ? i : i + 1)}
+              className={`relative w-12 h-16 sm:w-14 sm:h-20 rounded-b-2xl rounded-t-lg border-2 overflow-hidden transition-all group
+                ${i < currentWater ? 'border-blue-200 bg-blue-50' : 'border-stone-100 hover:border-blue-100 bg-stone-50'}
+              `}
+            >
+              <div 
+                className="absolute bottom-0 left-0 right-0 bg-blue-200 transition-all duration-500 ease-out"
+                style={{ height: i < currentWater ? '100%' : '0%' }}
+              />
+              <Droplets className={`absolute inset-0 m-auto w-6 h-6 transition-colors z-10 ${
+                i < currentWater ? 'text-blue-600' : 'text-stone-300 group-hover:text-blue-300'
+              }`} />
+            </button>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+function ListBoard({ tasks, onAdd, onToggle, onDelete, isShared, profile, profiles, t, activeTab }) {
+  const [inputValue, setInputValue] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!inputValue.trim()) return;
+    onAdd(inputValue);
+    setInputValue('');
+  };
+
+  const presets = t.presets[activeTab] || [];
+  const pending = tasks.filter(tItem => !tItem.completed);
+  const completed = tasks.filter(tItem => tItem.completed);
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      
+      {/* Quick Add Presets */}
+      {presets.length > 0 && (
+        <div className="space-y-2">
+          <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider pl-1">{t.quickAdd}</span>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {presets.map((presetText, idx) => (
+              <button
+                key={idx}
+                onClick={() => onAdd(presetText)}
+                className="bg-white hover:bg-stone-50 border border-stone-100 text-stone-600 px-3.5 py-2 rounded-full text-xs font-medium whitespace-nowrap shadow-2xs active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <Plus size={13} className="text-stone-400" />
+                <span>{presetText}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Input Form */}
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-stone-400">
+          <Plus className="w-5 h-5" />
+        </div>
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder={t.newTaskPlaceholder}
+          className="w-full bg-white border-2 border-stone-100 rounded-3xl py-4 pl-14 pr-16 text-base focus:outline-none focus:border-stone-300 focus:ring-0 transition-all shadow-2xs placeholder:text-stone-300 text-stone-700"
+        />
+        <button 
+          type="submit"
+          disabled={!inputValue.trim()}
+          className={`absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-2xl transition-all disabled:opacity-50 ${
+            isShared ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : `${profile.bg} ${profile.color} hover:${profile.activeBg}`
+          }`}
+        >
+          <Send className="w-5 h-5" />
+        </button>
+      </form>
+
+      {/* Task List */}
+      <div className="space-y-3">
+        {tasks.length === 0 && (
+          <div className="py-12 text-center text-stone-400 flex flex-col items-center gap-3">
+            <User className="w-12 h-12 opacity-20" />
+            <p className="text-sm">{t.emptyState}</p>
+          </div>
+        )}
+
+        {/* Pending */}
+        {pending.map(task => (
+          <TaskItem key={task.id} task={task} onToggle={onToggle} onDelete={onDelete} isShared={isShared} profiles={profiles} t={t} />
+        ))}
+
+        {/* Completed */}
+        {completed.length > 0 && (
+          <div className="pt-6 mt-6 border-t border-stone-100 space-y-3">
+            <p className="text-xs font-bold text-stone-300 uppercase tracking-wider pl-2">{t.completedTitle}</p>
+            {completed.map(task => (
+              <TaskItem key={task.id} task={task} onToggle={onToggle} onDelete={onDelete} isShared={isShared} profiles={profiles} t={t} />
+            ))}
+          </div>
+        )}
+      </div>
+
+    </div>
+  );
+}
+
+function TaskItem({ task, onToggle, onDelete, isShared, profiles, t }) {
+  const creatorProfile = profiles.find(p => p.id === task.createdBy);
+
+  return (
+    <div className={`group flex items-center gap-4 p-4 sm:p-5 bg-white rounded-[1.5rem] border-2 transition-all shadow-2xs
+      ${task.completed ? 'border-stone-100 bg-stone-50/50 opacity-60' : 'border-stone-100 hover:border-stone-200 hover:shadow-xs'}`}
+    >
+      <button 
+        onClick={() => onToggle(task)}
+        className="shrink-0 text-stone-300 hover:text-stone-500 transition-colors"
+      >
+        {task.completed ? <CheckCircle2 className="w-6 h-6 text-emerald-500" /> : <Circle className="w-6 h-6" />}
+      </button>
+
+      <span className={`flex-1 text-sm sm:text-base transition-all break-words ${task.completed ? 'line-through text-stone-400' : 'text-stone-700'}`}>
+        {task.text}
+      </span>
+
+      {isShared && creatorProfile && (
+        <div className={`shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${creatorProfile.bg} ${creatorProfile.color}`}>
+          <span>{creatorProfile.name} {t.addedBy}</span>
+        </div>
+      )}
+
+      <button 
+        onClick={() => onDelete(task.id)}
+        className="shrink-0 opacity-0 group-hover:opacity-100 p-2 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all focus:opacity-100"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
