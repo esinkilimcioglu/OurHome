@@ -1,214 +1,408 @@
-import React, { useState, useEffect } from 'react';
-import { db } from './firebase';
+import React, { useState, useEffect, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { 
-  collection, 
-  addDoc, 
-  onSnapshot, 
-  query, 
-  orderBy, 
-  updateDoc, 
-  doc, 
-  serverTimestamp 
-} from 'firebase/firestore';
-import { 
-  Heart, 
-  Plus, 
-  Droplet, 
-  Globe, 
-  CheckCircle2, 
-  Home, 
-  User, 
-  LogOut,
-  Pencil
+  Cat, Heart, Droplets, CheckCircle2, Circle, Plus, Trash2, 
+  BookOpen, Film, Dumbbell, Sun, Menu, X, Send, 
+  Utensils, Wind, ShoppingCart, Shirt, Sparkles, Coffee,
+  Globe, Pencil, User, LogOut
 } from 'lucide-react';
 
-// --- ÇEVİRİ SÖZLÜĞÜ (DIL DESTEĞI) ---
-const dict = {
+// --- FIREBASE INITIALIZATION ---
+const firebaseConfig = {
+  apiKey: "AIzaSyBYsOxNILZSU55D4HW3WxD1gPCGbZYwCz8",
+  authDomain: "pati-evi.firebaseapp.com",
+  projectId: "pati-evi",
+  storageBucket: "pati-evi.firebasestorage.app",
+  messagingSenderId: "532805656496",
+  appId: "1:532805656496:web:e17fada37ebac437bd8075"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = "ourhome";
+
+// --- ÇEVİRİ VE İÇERİK SÖZLÜĞÜ (TR / EN) ---
+const DICT = {
   tr: {
+    appName: "OurHome",
     welcome: "Hoş Geldin!",
-    selectProfile: "Lütfen kendi profilini seç.",
+    selectProfile: "Lütfen profilini seç veya yeni bir alan oluştur.",
     addUser: "Yeni Kişi Ekle",
-    enterName: "Eklenecek kişinin adını yazın:",
-    renamePrompt: "Yeni ismi girin:",
+    enterName: "Eklenecek kişinin adı:",
+    renamePrompt: "Profilin yeni ismi:",
+    changeProfile: "Profili Değiştir",
+    hug: "Sarıl",
+    hugSent: "Sımsıkı sarıldın! 💖",
     mySpace: "Benim Alanım",
     sharedSpace: "Ortak Alan",
-    hug: "Sarıl",
-    water: "Su İç",
-    newTask: "Yeni bir adım ekle...",
-    add: "Ekle",
-    logout: "Profilden Çık",
-    noTask: "Henüz bir şey yok. Sadece dinlen.",
-    hugSent: "Sımsıkı sarıldın! 💖",
-    waterDrank: "Su içildi! 💧",
-    tasks: "Günün Akışı",
+    waterTracker: "Su Takibi (8 Bardak)",
+    dailyStepsTitle: "Günlük Küçük Adımlar 🐾",
+    dailyStepsSubtitle: "Zorunluluk yok, yapabildiğin kadarını işaretle. Kendine iyi bak.",
+    newTaskPlaceholder: "Yeni bir şey veya fikir ekle...",
+    completedTitle: "Tamamlananlar",
+    emptyState: "Buralar henüz boş. Hadi ilk notu sen ekle!",
+    quickAdd: "Hızlı Mikro-Adımlar 🌿",
+    addedBy: "ekledi",
+    tabs: {
+      ozbakim: 'Özbakım',
+      market: 'Market',
+      camasir: 'Çamaşır',
+      temizlik: 'Temizlik',
+      spor: 'Spor',
+      ders: 'Ders',
+      filmdizi: 'Film & Dizi',
+      tarifler: 'Tarif Defteri'
+    },
+    habits: [
+      { id: 'dus', label: 'Ilık bir duş al', icon: Droplets },
+      { id: 'hava', label: 'Odayı 10 dk havalandır', icon: Wind },
+      { id: 'yemek', label: 'Güzel bir öğün ye', icon: Utensils },
+      { id: 'kahve', label: 'Sıcak bir şeyler iç', icon: Coffee }
+    ],
+    presets: {
+      ozbakim: ["Odayı havalandır 🌬️", "Yatağı topla 🛏️", "Duş al 🧼", "5 dk yürüyüş 🚶‍♀️"],
+      market: ["Meyve & Sebze 🍎", "Süt & Yoğurt 🥛", "Atıştırmalık 🥨"],
+      camasir: ["Açıkları yıka 🧺", "Koyu renkleri yıka 👕", "Çamaşırları as ☀️"],
+      temizlik: ["Çöpü dök 🗑️", "Bulaşıkları diz 🍽️", "Masayı sil 🧽"],
+      spor: ["10 dk esneme 🧘‍♀️", "Hafif yürüyüş 👟", "Beden ağırlığı sporu 💪"],
+      ders: ["25 dk odaklanma (Pomodoro) ⏱️", "Notları gözden geçir 📝"],
+      filmdizi: ["Nostaljik bir film seç 🎬", "Yeni mini diziye başla 📺", "Belgesel izle 🌿"],
+      tarifler: ["Pratik akşam yemeği 🍝", "Kahvaltı krepi 🥞", "Bitki çayı demle 🫖"]
+    }
   },
   en: {
+    appName: "OurHome",
     welcome: "Welcome!",
-    selectProfile: "Please select your profile.",
+    selectProfile: "Please select your profile or add a new space.",
     addUser: "Add User",
-    enterName: "Enter the new user's name:",
-    renamePrompt: "Enter new name:",
+    enterName: "Enter new user's name:",
+    renamePrompt: "New profile name:",
+    changeProfile: "Switch Profile",
+    hug: "Send Hug",
+    hugSent: "Hug sent! 💖",
     mySpace: "My Space",
     sharedSpace: "Shared Space",
-    hug: "Send Hug",
-    water: "Drink Water",
-    newTask: "Add a gentle step...",
-    add: "Add",
-    logout: "Log Out",
-    noTask: "Nothing here yet. Take it easy.",
-    hugSent: "Hug sent! 💖",
-    waterDrank: "Water drank! 💧",
-    tasks: "Daily Flow",
+    waterTracker: "Water Tracker (8 Glasses)",
+    dailyStepsTitle: "Gentle Daily Steps 🐾",
+    dailyStepsSubtitle: "No pressure, check off what you can. Take care of yourself.",
+    newTaskPlaceholder: "Add a new task or idea...",
+    completedTitle: "Completed",
+    emptyState: "Nothing here yet. Go ahead and add the first note!",
+    quickAdd: "Quick Micro-Steps 🌿",
+    addedBy: "added",
+    tabs: {
+      ozbakim: 'Self-Care',
+      market: 'Groceries',
+      camasir: 'Laundry',
+      temizlik: 'Cleaning',
+      spor: 'Fitness',
+      ders: 'Study',
+      filmdizi: 'Movies & Shows',
+      tarifler: 'Recipe Book'
+    },
+    habits: [
+      { id: 'dus', label: 'Take a warm shower', icon: Droplets },
+      { id: 'hava', label: 'Air out room for 10m', icon: Wind },
+      { id: 'yemek', label: 'Eat a good meal', icon: Utensils },
+      { id: 'kahve', label: 'Drink something warm', icon: Coffee }
+    ],
+    presets: {
+      ozbakim: ["Air out room 🌬️", "Make the bed 🛏️", "Take a shower 🧼", "5-min walk 🚶‍♀️"],
+      market: ["Fruits & Veggies 🍎", "Milk & Yogurt 🥛", "Snacks 🥨"],
+      camasir: ["Wash lights 🧺", "Wash darks 👕", "Hang clothes ☀️"],
+      temizlik: ["Take out trash 🗑️", "Load dishwasher 🍽️", "Wipe table 🧽"],
+      spor: ["10-min stretch 🧘‍♀️", "Light walk 👟", "Bodyweight workout 💪"],
+      ders: ["25-min focus session ⏱️", "Review notes 📝"],
+      filmdizi: ["Pick a comfort movie 🎬", "Start a new mini-series 📺", "Watch a doc 🌿"],
+      tarifler: ["Quick dinner idea 🍝", "Breakfast pancakes 🥞", "Brew herbal tea 🫖"]
+    }
   }
 };
 
+const TABS = [
+  // Kişisel
+  { id: 'ozbakim', icon: Sun, type: 'personal' },
+  { id: 'market', icon: ShoppingCart, type: 'personal' },
+  { id: 'camasir', icon: Shirt, type: 'personal' },
+  { id: 'temizlik', icon: Sparkles, type: 'personal' },
+  { id: 'spor', icon: Dumbbell, type: 'personal' },
+  { id: 'ders', icon: BookOpen, type: 'personal' },
+  // Ortak
+  { id: 'filmdizi', icon: Film, type: 'shared' },
+  { id: 'tarifler', icon: Utensils, type: 'shared' },
+];
+
+const DEFAULT_PROFILES = [
+  { id: 'p1', name: 'Profil 1', color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-200', activeBg: 'bg-rose-100', icon: Cat },
+  { id: 'p2', name: 'Profil 2', color: 'text-indigo-500', bg: 'bg-indigo-50', border: 'border-indigo-200', activeBg: 'bg-indigo-100', icon: Cat }
+];
+
+const getTodayId = () => new Date().toISOString().split('T')[0];
+
 export default function App() {
+  // State
   const [lang, setLang] = useState('tr');
-  const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('personal');
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [profiles, setProfiles] = useState(DEFAULT_PROFILES);
+  const [activeProfileId, setActiveProfileId] = useState(null);
+  const [activeTab, setActiveTab] = useState('ozbakim');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Data State
   const [tasks, setTasks] = useState([]);
-  const [newTask, setNewTask] = useState("");
-  const [users, setUsers] = useState([]);
-  const [toast, setToast] = useState("");
+  const [dailyCare, setDailyCare] = useState({ water: 0 });
+  const [floatingHearts, setFloatingHearts] = useState([]);
 
-  const t = dict[lang];
+  const mountTime = useRef(Date.now());
+  const t = DICT[lang];
 
-  // Kullanıcıları Firebase'den çek, eğer veritabanı boşsa varsayılan 2 profili oluştur
+  // 1. SAFE AUTHENTICATION
   useEffect(() => {
-    const q = query(collection(db, 'users'), orderBy('createdAt', 'asc'));
-    const unsub = onSnapshot(q, (snapshot) => {
-      if (snapshot.empty) {
-        const seedDefaultUsers = async () => {
-          await addDoc(collection(db, 'users'), { 
-            name: 'Profil 1', 
-            color: 'bg-pink-100 text-pink-600 border-pink-200', 
-            createdAt: serverTimestamp() 
-          });
-          await addDoc(collection(db, 'users'), { 
-            name: 'Profil 2', 
-            color: 'bg-blue-100 text-blue-600 border-blue-200', 
-            createdAt: serverTimestamp() 
-          });
-        };
-        seedDefaultUsers();
-      } else {
-        setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    let isMounted = true;
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (error) {
+        console.error("Kimlik doğrulama hatası:", error);
+        if (isMounted) setLoading(false);
+      }
+    };
+    
+    initAuth();
+    
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (isMounted) {
+        setUser(currentUser);
+        setLoading(false);
       }
     });
-    return () => unsub();
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
-  // Görevleri Çek
+  // 2. FETCH PROFILES, TASKS & HEARTS
   useEffect(() => {
-    if (!currentUser) return;
-    const q = query(collection(db, 'tasks'), orderBy('createdAt', 'desc'));
-    const unsub = onSnapshot(q, (snapshot) => {
-      setTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsub();
-  }, [currentUser]);
+    if (!user) return;
 
-  // Yeni Kullanıcı Ekleme
+    // Profiles
+    const profilesRef = collection(db, 'artifacts', appId, 'public', 'data', 'pati_profiles');
+    const unsubProfiles = onSnapshot(profilesRef, (snapshot) => {
+      if (!snapshot.empty) {
+        const fetched = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Map styling
+        const styled = fetched.map((p, idx) => ({
+          ...p,
+          color: p.color || (idx % 2 === 0 ? 'text-rose-500' : 'text-indigo-500'),
+          bg: p.bg || (idx % 2 === 0 ? 'bg-rose-50' : 'bg-indigo-50'),
+          border: p.border || (idx % 2 === 0 ? 'border-rose-200' : 'border-indigo-200'),
+          activeBg: p.activeBg || (idx % 2 === 0 ? 'bg-rose-100' : 'bg-indigo-100'),
+          icon: Cat
+        }));
+        setProfiles(styled);
+      }
+    });
+
+    // Tasks
+    const tasksRef = collection(db, 'artifacts', appId, 'public', 'data', 'pati_tasks');
+    const unsubTasks = onSnapshot(tasksRef, (snapshot) => {
+      const fetchedTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      fetchedTasks.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      setTasks(fetchedTasks);
+    }, (err) => console.error("Görevler alınamadı:", err));
+
+    // Hearts
+    const heartsRef = collection(db, 'artifacts', appId, 'public', 'data', 'pati_hearts');
+    const unsubHearts = onSnapshot(heartsRef, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const heartData = change.doc.data();
+          if (heartData.timestamp > mountTime.current) {
+            triggerHeart(heartData.from);
+          }
+        }
+      });
+    }, (err) => console.error("Kalpler alınamadı:", err));
+
+    return () => {
+      unsubProfiles();
+      unsubTasks();
+      unsubHearts();
+    };
+  }, [user]);
+
+  // 3. FETCH DAILY CARE
+  useEffect(() => {
+    if (!user || !activeProfileId) return;
+    
+    const today = getTodayId();
+    const docId = `care_${activeProfileId}_${today}`;
+    const careRef = doc(db, 'artifacts', appId, 'public', 'data', 'pati_care', docId);
+
+    const unsubCare = onSnapshot(careRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setDailyCare(docSnap.data());
+      } else {
+        setDailyCare({ water: 0 });
+      }
+    }, (err) => console.error("Özbakım verisi alınamadı:", err));
+
+    return () => unsubCare();
+  }, [user, activeProfileId]);
+
+  // --- ACTIONS ---
+
   const handleAddUser = async () => {
     const name = window.prompt(t.enterName);
     if (!name || !name.trim()) return;
-    await addDoc(collection(db, 'users'), {
+    const newId = `user_${Date.now()}`;
+    const profileData = {
       name: name.trim(),
-      color: 'bg-green-100 text-green-600 border-green-200',
-      createdAt: serverTimestamp()
-    });
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+      border: 'border-emerald-200',
+      activeBg: 'bg-emerald-100'
+    };
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pati_profiles', newId), profileData);
   };
 
-  // İsim Değiştirme (Kalem İkonuyla)
-  const handleRenameUser = async (e, user) => {
+  const handleRenameProfile = async (e, profileItem) => {
     e.stopPropagation();
-    const newName = window.prompt(t.renamePrompt, user.name);
-    if (newName && newName.trim() !== "") {
-      await updateDoc(doc(db, 'users', user.id), { 
-        name: newName.trim() 
-      });
-    }
+    const newName = window.prompt(t.renamePrompt, profileItem.name);
+    if (!newName || !newName.trim()) return;
+    
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pati_profiles', profileItem.id), {
+      name: newName.trim()
+    }, { merge: true });
   };
 
-  // Görev Ekleme
-  const addTask = async (e) => {
-    e.preventDefault();
-    if (!newTask.trim()) return;
-    await addDoc(collection(db, 'tasks'), {
-      text: newTask,
+  const handleAddTask = async (text) => {
+    if (!user || !text.trim() || !activeProfileId) return;
+    const isShared = TABS.find(tItem => tItem.id === activeTab)?.type === 'shared';
+    
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'pati_tasks'), {
+      text: text.trim(),
+      category: activeTab,
       completed: false,
-      ownerId: currentUser.id,
-      ownerName: currentUser.name,
-      isShared: activeTab === 'shared',
-      createdAt: serverTimestamp()
-    });
-    setNewTask("");
-  };
-
-  // Görev Tamamlama
-  const toggleTask = async (taskId, currentStatus) => {
-    await updateDoc(doc(db, 'tasks', taskId), {
-      completed: !currentStatus
+      owner: isShared ? 'shared' : activeProfileId,
+      createdBy: activeProfileId,
+      createdAt: Date.now()
     });
   };
 
-  // Bildirimler (Toast)
-  const showToast = (message) => {
-    setToast(message);
-    setTimeout(() => setToast(""), 3000);
+  const handleToggleTask = async (task) => {
+    if (!user) return;
+    const taskRef = doc(db, 'artifacts', appId, 'public', 'data', 'pati_tasks', task.id);
+    await setDoc(taskRef, { completed: !task.completed }, { merge: true });
   };
 
-  const displayedTasks = tasks.filter(task => 
-    activeTab === 'shared' ? task.isShared : (!task.isShared && task.ownerId === currentUser?.id)
-  );
+  const handleDeleteTask = async (taskId) => {
+    if (!user) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pati_tasks', taskId));
+  };
 
-  // --- GİRİŞ EKRANI (PROFIL SEÇIMI) ---
-  if (!currentUser) {
+  const handleToggleHabit = async (habitId) => {
+    if (!user || !activeProfileId) return;
+    const docId = `care_${activeProfileId}_${getTodayId()}`;
+    const careRef = doc(db, 'artifacts', appId, 'public', 'data', 'pati_care', docId);
+    
+    const currentValue = dailyCare[habitId] || false;
+    await setDoc(careRef, { [habitId]: !currentValue }, { merge: true });
+  };
+
+  const handleSetWater = async (count) => {
+    if (!user || !activeProfileId) return;
+    const docId = `care_${activeProfileId}_${getTodayId()}`;
+    const careRef = doc(db, 'artifacts', appId, 'public', 'data', 'pati_care', docId);
+    
+    await setDoc(careRef, { water: count }, { merge: true });
+  };
+
+  const handleSendHug = async () => {
+    if (!user || !activeProfileId) return;
+    
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'pati_hearts'), {
+      from: activeProfileId,
+      timestamp: Date.now()
+    });
+    
+    triggerHeart(activeProfileId);
+  };
+
+  const triggerHeart = (fromProfile) => {
+    const id = Date.now() + Math.random();
+    setFloatingHearts(prev => [...prev, { id, fromProfile }]);
+    setTimeout(() => {
+      setFloatingHearts(prev => prev.filter(h => h.id !== id));
+    }, 4000);
+  };
+
+  // --- RENDER HELPERS ---
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center p-6 transition-colors duration-300">
-        
-        {/* Dil Seçeneği */}
-        <button 
-          onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')}
-          className="absolute top-6 right-6 flex items-center gap-2 bg-white/50 px-4 py-2 rounded-full shadow-sm text-gray-500 hover:bg-white transition"
-        >
-          <Globe size={18} />
-          <span className="text-sm font-medium uppercase">{lang}</span>
-        </button>
+      <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center flex-col gap-4 font-sans">
+        <div className="w-12 h-12 border-4 border-rose-100 border-t-rose-400 rounded-full animate-spin"></div>
+        <p className="text-stone-400 font-medium tracking-wide">OurHome Yükleniyor...</p>
+      </div>
+    );
+  }
 
-        <div className="bg-white p-10 rounded-[3rem] shadow-sm w-full max-w-sm text-center">
-          <h1 className="text-3xl font-semibold text-gray-700 mb-2">OurHome</h1>
-          <p className="text-gray-400 mb-8">{t.selectProfile}</p>
+  if (!activeProfileId) {
+    return (
+      <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center p-6 font-sans">
+        <div className="max-w-md w-full bg-white p-8 sm:p-10 rounded-[2.5rem] shadow-sm border border-stone-100 text-center relative">
+          
+          {/* Language Selector */}
+          <button 
+            onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')}
+            className="absolute top-6 right-6 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-50 hover:bg-stone-100 text-stone-500 text-xs font-semibold uppercase transition-all"
+          >
+            <Globe size={14} />
+            <span>{lang}</span>
+          </button>
 
+          <h1 className="text-3xl font-semibold text-stone-800 mb-2">{t.appName}</h1>
+          <p className="text-stone-400 text-sm mb-8">{t.selectProfile}</p>
+          
           <div className="grid grid-cols-2 gap-4 mb-6">
-            {users.map((u) => (
+            {profiles.map((p) => (
               <button
-                key={u.id}
-                onClick={() => setCurrentUser(u)}
-                className={`${u.color} border-2 aspect-square rounded-3xl flex flex-col items-center justify-center gap-3 transition-transform active:scale-95 relative group`}
+                key={p.id}
+                onClick={() => setActiveProfileId(p.id)}
+                className={`flex flex-col items-center gap-3 p-6 rounded-3xl border-2 transition-all hover:-translate-y-1 relative group ${p.bg} ${p.border}`}
               >
-                {/* İsim Değiştirme Butonu */}
                 <div 
-                  onClick={(e) => handleRenameUser(e, u)}
-                  className="absolute top-3 right-3 p-1.5 bg-white/50 rounded-full text-current opacity-70 hover:opacity-100 transition-opacity"
+                  onClick={(e) => handleRenameProfile(e, p)}
+                  className="absolute top-3 right-3 p-1.5 rounded-full bg-white/70 hover:bg-white text-stone-400 hover:text-stone-700 transition-all shadow-2xs"
                   title={t.renamePrompt}
                 >
-                  <Pencil size={14} />
+                  <Pencil size={13} />
                 </div>
 
-                <div className="bg-white/50 p-3 rounded-full mt-2">
-                  <User size={32} />
+                <div className={`p-4 rounded-full bg-white shadow-sm ${p.color}`}>
+                  <Cat className="w-8 h-8" />
                 </div>
-                <span className="font-medium text-lg px-2 text-center w-full truncate">{u.name}</span>
+                <span className={`font-medium text-base truncate w-full px-2 ${p.color}`}>{p.name}</span>
               </button>
             ))}
           </div>
 
           <button 
             onClick={handleAddUser}
-            className="w-full py-4 border-2 border-dashed border-gray-200 rounded-3xl text-gray-400 font-medium flex items-center justify-center gap-2 hover:bg-gray-50/50 transition"
+            className="w-full py-4 border-2 border-dashed border-stone-200 rounded-3xl text-stone-400 font-medium flex items-center justify-center gap-2 hover:bg-stone-50 transition-all text-sm"
           >
-            <Plus size={20} />
+            <Plus size={18} />
             {t.addUser}
           </button>
         </div>
@@ -216,114 +410,388 @@ export default function App() {
     );
   }
 
-  // --- ANA UYGULAMA EKRANI ---
+  const profile = profiles.find(p => p.id === activeProfileId) || profiles[0];
+  const activeTabData = TABS.find(tItem => tItem.id === activeTab);
+  
+  const currentTasks = tasks.filter(tItem => {
+    if (tItem.category !== activeTab) return false;
+    if (activeTabData.type === 'personal' && tItem.owner !== activeProfileId) return false;
+    return true;
+  });
+
   return (
-    <div className="min-h-screen bg-[#FDFBF7] flex flex-col max-w-md mx-auto relative shadow-2xl overflow-hidden">
+    <div className="min-h-screen bg-[#FDFBF7] text-stone-700 font-sans flex overflow-hidden">
       
-      {/* Toast Mesajı */}
-      <div className={`absolute top-6 left-1/2 -translate-x-1/2 bg-white px-6 py-3 rounded-full shadow-lg font-medium text-gray-600 flex items-center gap-2 transition-all z-50 ${toast ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10 pointer-events-none'}`}>
-        {toast}
+      {/* Floating Hearts Animation Container */}
+      <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+        {floatingHearts.map(heart => {
+          const sender = profiles.find(p => p.id === heart.fromProfile);
+          return (
+            <div 
+              key={heart.id}
+              className="absolute bottom-0 animate-float-up"
+              style={{ 
+                left: `${Math.random() * 80 + 10}%`,
+                animationDuration: `${Math.random() * 2 + 3}s` 
+              }}
+            >
+              <Heart className={`w-16 h-16 fill-current opacity-70 ${sender?.color || 'text-rose-400'}`} />
+            </div>
+          );
+        })}
       </div>
 
-      {/* Üst Bar */}
-      <div className="px-6 pt-8 pb-4 flex items-center justify-between">
-        <div className="overflow-hidden">
-          <h2 className="text-2xl font-semibold text-gray-700 truncate">{t.welcome} {currentUser.name}!</h2>
-          <p className="text-sm text-gray-400">OurHome</p>
+      {/* SIDEBAR (Desktop) / MOBILE MENU */}
+      <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-stone-100 transform transition-transform duration-300 ease-in-out flex flex-col shadow-lg lg:shadow-none
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} lg:relative`}
+      >
+        <div className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-2xl ${profile.bg} ${profile.color}`}>
+              <Cat className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-lg text-stone-800 leading-tight">{profile.name}</h2>
+              <span className="text-xs text-stone-400">{t.appName}</span>
+            </div>
+          </div>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden text-stone-400">
+            <X className="w-6 h-6" />
+          </button>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')} className="p-2 bg-white rounded-full shadow-sm text-gray-400">
-            <Globe size={20} />
+
+        <div className="flex-1 overflow-y-auto px-4 py-2 space-y-6 custom-scrollbar">
+          
+          {/* Benim Alanım */}
+          <div>
+            <h3 className="px-3 mb-2 text-[11px] font-bold text-stone-400 uppercase tracking-wider">{t.mySpace}</h3>
+            <div className="space-y-1">
+              {TABS.filter(tItem => tItem.type === 'personal').map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => { setActiveTab(tab.id); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-all ${
+                    activeTab === tab.id 
+                      ? `${profile.activeBg} ${profile.color} font-medium` 
+                      : 'text-stone-500 hover:bg-stone-50'
+                  }`}
+                >
+                  <tab.icon className="w-5 h-5 shrink-0" />
+                  <span className="truncate">{t.tabs[tab.id]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Ortak Alan */}
+          <div>
+            <h3 className="px-3 mb-2 text-[11px] font-bold text-stone-400 uppercase tracking-wider">{t.sharedSpace}</h3>
+            <div className="space-y-1">
+              {TABS.filter(tItem => tItem.type === 'shared').map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => { setActiveTab(tab.id); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-all ${
+                    activeTab === tab.id 
+                      ? `bg-amber-100 text-amber-700 font-medium` 
+                      : 'text-stone-500 hover:bg-stone-50'
+                  }`}
+                >
+                  <tab.icon className="w-5 h-5 shrink-0" />
+                  <span className="truncate">{t.tabs[tab.id]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="p-4 border-t border-stone-100 flex items-center justify-between">
+          <button 
+            onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-stone-500 hover:bg-stone-50 uppercase transition-all"
+          >
+            <Globe size={16} />
+            <span>{lang}</span>
           </button>
-          <button onClick={() => setCurrentUser(null)} className="p-2 bg-white rounded-full shadow-sm text-gray-400">
-            <LogOut size={20} />
+          
+          <button 
+            onClick={() => setActiveProfileId(null)}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-stone-400 hover:text-stone-600 transition-colors"
+          >
+            <LogOut size={14} />
+            <span>{t.changeProfile}</span>
           </button>
         </div>
       </div>
 
-      {/* Tab Menüsü */}
-      <div className="px-6 flex gap-4 mb-6">
-        <button 
-          onClick={() => setActiveTab('personal')}
-          className={`flex-1 py-3 rounded-2xl font-medium transition flex items-center justify-center gap-2 ${activeTab === 'personal' ? 'bg-white shadow-sm text-gray-700' : 'text-gray-400'}`}
-        >
-          <User size={18} />
-          {t.mySpace}
-        </button>
-        <button 
-          onClick={() => setActiveTab('shared')}
-          className={`flex-1 py-3 rounded-2xl font-medium transition flex items-center justify-center gap-2 ${activeTab === 'shared' ? 'bg-white shadow-sm text-gray-700' : 'text-gray-400'}`}
-        >
-          <Home size={18} />
-          {t.sharedSpace}
-        </button>
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 bg-stone-900/20 backdrop-blur-xs z-30 lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />
+      )}
+
+      {/* MAIN CONTENT */}
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        
+        {/* Header */}
+        <header className="h-20 px-6 flex items-center justify-between bg-white/50 backdrop-blur-md border-b border-stone-100 z-20 shrink-0">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden text-stone-500 hover:text-stone-700 p-1 -ml-2">
+              <Menu className="w-6 h-6" />
+            </button>
+            <div className="flex items-center gap-2.5 text-xl font-semibold text-stone-800">
+              <activeTabData.icon className={`w-6 h-6 ${activeTabData.type === 'shared' ? 'text-amber-500' : profile.color}`} />
+              <span>{t.tabs[activeTabData.id]}</span>
+            </div>
+          </div>
+
+          <button 
+            onClick={handleSendHug}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all shadow-2xs border border-rose-100 active:scale-95"
+          >
+            <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
+            <span className="text-sm font-medium hidden sm:block">{t.hug}</span>
+          </button>
+        </header>
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar">
+          <div className="max-w-3xl mx-auto pb-20">
+            {activeTab === 'ozbakim' ? (
+              <SelfCareBoard 
+                dailyCare={dailyCare} 
+                onToggleHabit={handleToggleHabit} 
+                onSetWater={handleSetWater} 
+                profile={profile} 
+                t={t}
+              />
+            ) : (
+              <ListBoard 
+                tasks={currentTasks} 
+                onAdd={handleAddTask} 
+                onToggle={handleToggleTask} 
+                onDelete={handleDeleteTask}
+                isShared={activeTabData.type === 'shared'}
+                profile={profile}
+                profiles={profiles}
+                t={t}
+                activeTab={activeTab}
+              />
+            )}
+          </div>
+        </div>
+      </main>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes float-up {
+          0% { transform: translateY(50px) scale(0.5) rotate(-10deg); opacity: 0; }
+          20% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+          80% { opacity: 1; }
+          100% { transform: translateY(-100vh) scale(1.5) rotate(20deg); opacity: 0; }
+        }
+        .animate-float-up {
+          animation: float-up forwards cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e7e5e4; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #d6d3d1; }
+      `}} />
+    </div>
+  );
+}
+
+// --- SUB-COMPONENTS ---
+
+function SelfCareBoard({ dailyCare, onToggleHabit, onSetWater, profile, t }) {
+  const maxWater = 8;
+  const currentWater = dailyCare.water || 0;
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      
+      {/* Habits Card */}
+      <div className="bg-white rounded-[2rem] p-6 sm:p-8 border border-stone-100 shadow-2xs text-center">
+        <h3 className="text-lg font-medium text-stone-800 mb-1">{t.dailyStepsTitle}</h3>
+        <p className="text-stone-400 text-sm mb-8">{t.dailyStepsSubtitle}</p>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+          {t.habits.map(habit => {
+            const isDone = !!dailyCare[habit.id];
+            const HabitIcon = habit.icon;
+            return (
+              <button
+                key={habit.id}
+                onClick={() => onToggleHabit(habit.id)}
+                className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${
+                  isDone 
+                    ? `${profile.bg} ${profile.border} ${profile.color}` 
+                    : 'bg-white border-stone-100 hover:border-stone-200 text-stone-600'
+                }`}
+              >
+                <div className={`shrink-0 ${isDone ? profile.color : 'text-stone-300'}`}>
+                  {isDone ? <CheckCircle2 className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
+                </div>
+                <span className={`flex-1 font-medium text-sm ${isDone ? '' : 'text-stone-600'}`}>
+                  {habit.label}
+                </span>
+                <HabitIcon className={`w-5 h-5 opacity-40`} />
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Etkileşim Butonları */}
-      {activeTab === 'personal' && (
-        <div className="px-6 flex gap-4 mb-8">
-          <button onClick={() => showToast(t.hugSent)} className="flex-1 bg-pink-100 text-pink-500 py-4 rounded-3xl font-medium flex flex-col items-center justify-center gap-2 active:scale-95 transition">
-            <Heart size={24} fill="currentColor" />
-            {t.hug}
-          </button>
-          <button onClick={() => showToast(t.waterDrank)} className="flex-1 bg-blue-100 text-blue-500 py-4 rounded-3xl font-medium flex flex-col items-center justify-center gap-2 active:scale-95 transition">
-            <Droplet size={24} fill="currentColor" />
-            {t.water}
-          </button>
+      {/* Water Tracker Card */}
+      <div className="bg-white rounded-[2rem] p-6 sm:p-8 border border-stone-100 shadow-2xs text-center">
+        <h3 className="text-lg font-medium text-stone-800 mb-6 flex items-center justify-center gap-2">
+          <Droplets className="w-5 h-5 text-blue-400" /> {t.waterTracker}
+        </h3>
+        
+        <div className="flex flex-wrap justify-center gap-3">
+          {[...Array(maxWater)].map((_, i) => (
+            <button
+              key={i}
+              onClick={() => onSetWater(currentWater === i + 1 ? i : i + 1)}
+              className={`relative w-12 h-16 sm:w-14 sm:h-20 rounded-b-2xl rounded-t-lg border-2 overflow-hidden transition-all group
+                ${i < currentWater ? 'border-blue-200 bg-blue-50' : 'border-stone-100 hover:border-blue-100 bg-stone-50'}
+              `}
+            >
+              <div 
+                className="absolute bottom-0 left-0 right-0 bg-blue-200 transition-all duration-500 ease-out"
+                style={{ height: i < currentWater ? '100%' : '0%' }}
+              />
+              <Droplets className={`absolute inset-0 m-auto w-6 h-6 transition-colors z-10 ${
+                i < currentWater ? 'text-blue-600' : 'text-stone-300 group-hover:text-blue-300'
+              }`} />
+            </button>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+function ListBoard({ tasks, onAdd, onToggle, onDelete, isShared, profile, profiles, t, activeTab }) {
+  const [inputValue, setInputValue] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!inputValue.trim()) return;
+    onAdd(inputValue);
+    setInputValue('');
+  };
+
+  const presets = t.presets[activeTab] || [];
+  const pending = tasks.filter(tItem => !tItem.completed);
+  const completed = tasks.filter(tItem => tItem.completed);
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      
+      {/* Quick Add Presets (Hızlı Adımlar) */}
+      {presets.length > 0 && (
+        <div className="space-y-2">
+          <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider pl-1">{t.quickAdd}</span>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {presets.map((presetText, idx) => (
+              <button
+                key={idx}
+                onClick={() => onAdd(presetText)}
+                className="bg-white hover:bg-stone-50 border border-stone-100 text-stone-600 px-3.5 py-2 rounded-full text-xs font-medium whitespace-nowrap shadow-2xs active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <Plus size={13} className="text-stone-400" />
+                <span>{presetText}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Görev Listesi */}
-      <div className="px-6 flex-1 overflow-y-auto pb-24">
-        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 pl-2">{t.tasks}</h3>
-        
-        <div className="space-y-3">
-          {displayedTasks.length === 0 ? (
-            <p className="text-center text-gray-400 mt-10 italic">{t.noTask}</p>
-          ) : (
-            displayedTasks.map(task => (
-              <div 
-                key={task.id} 
-                onClick={() => toggleTask(task.id, task.completed)}
-                className={`bg-white p-4 rounded-2xl flex items-center gap-4 cursor-pointer transition ${task.completed ? 'opacity-50' : 'shadow-sm'}`}
-              >
-                <div className={`${task.completed ? 'text-green-400' : 'text-gray-200'}`}>
-                  <CheckCircle2 size={24} fill={task.completed ? "currentColor" : "none"} />
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <p className={`font-medium break-words ${task.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                    {task.text}
-                  </p>
-                  {activeTab === 'shared' && (
-                    <span className="text-xs text-gray-400 mt-1 block truncate">Ekleyen: {task.ownerName}</span>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
+      {/* Input Form */}
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-stone-400">
+          <Plus className="w-5 h-5" />
         </div>
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder={t.newTaskPlaceholder}
+          className="w-full bg-white border-2 border-stone-100 rounded-3xl py-4 pl-14 pr-16 text-base focus:outline-none focus:border-stone-300 focus:ring-0 transition-all shadow-2xs placeholder:text-stone-300 text-stone-700"
+        />
+        <button 
+          type="submit"
+          disabled={!inputValue.trim()}
+          className={`absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-2xl transition-all disabled:opacity-50 ${
+            isShared ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : `${profile.bg} ${profile.color} hover:${profile.activeBg}`
+          }`}
+        >
+          <Send className="w-5 h-5" />
+        </button>
+      </form>
+
+      {/* Task List */}
+      <div className="space-y-3">
+        {tasks.length === 0 && (
+          <div className="py-12 text-center text-stone-400 flex flex-col items-center gap-3">
+            <Cat className="w-12 h-12 opacity-20" />
+            <p className="text-sm">{t.emptyState}</p>
+          </div>
+        )}
+
+        {/* Pending */}
+        {pending.map(task => (
+          <TaskItem key={task.id} task={task} onToggle={onToggle} onDelete={onDelete} isShared={isShared} profiles={profiles} t={t} />
+        ))}
+
+        {/* Completed */}
+        {completed.length > 0 && (
+          <div className="pt-6 mt-6 border-t border-stone-100 space-y-3">
+            <p className="text-xs font-bold text-stone-300 uppercase tracking-wider pl-2">{t.completedTitle}</p>
+            {completed.map(task => (
+              <TaskItem key={task.id} task={task} onToggle={onToggle} onDelete={onDelete} isShared={isShared} profiles={profiles} t={t} />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Yeni Görev Ekleme Inputu */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#FDFBF7] via-[#FDFBF7] to-transparent">
-        <form onSubmit={addTask} className="flex gap-2">
-          <input 
-            type="text" 
-            value={newTask}
-            onChange={(e) => setNewTask(e.target.value)}
-            placeholder={t.newTask}
-            className="flex-1 px-6 py-4 rounded-full shadow-sm border-none focus:ring-2 focus:ring-pink-200 outline-none text-gray-600 bg-white"
-          />
-          <button 
-            type="submit"
-            className="bg-gray-800 text-white px-6 py-4 rounded-full font-medium active:scale-95 transition flex items-center gap-2"
-          >
-            <Plus size={20} />
-            <span className="hidden sm:inline">{t.add}</span>
-          </button>
-        </form>
-      </div>
+    </div>
+  );
+}
 
+function TaskItem({ task, onToggle, onDelete, isShared, profiles, t }) {
+  const creatorProfile = profiles.find(p => p.id === task.createdBy);
+
+  return (
+    <div className={`group flex items-center gap-4 p-4 sm:p-5 bg-white rounded-[1.5rem] border-2 transition-all shadow-2xs
+      ${task.completed ? 'border-stone-100 bg-stone-50/50 opacity-60' : 'border-stone-100 hover:border-stone-200 hover:shadow-xs'}`}
+    >
+      <button 
+        onClick={() => onToggle(task)}
+        className="shrink-0 text-stone-300 hover:text-stone-500 transition-colors"
+      >
+        {task.completed ? <CheckCircle2 className="w-6 h-6 text-emerald-500" /> : <Circle className="w-6 h-6" />}
+      </button>
+
+      <span className={`flex-1 text-sm sm:text-base transition-all break-words ${task.completed ? 'line-through text-stone-400' : 'text-stone-700'}`}>
+        {task.text}
+      </span>
+
+      {isShared && creatorProfile && (
+        <div className={`shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${creatorProfile.bg} ${creatorProfile.color}`}>
+          <span>{creatorProfile.name} {t.addedBy}</span>
+        </div>
+      )}
+
+      <button 
+        onClick={() => onDelete(task.id)}
+        className="shrink-0 opacity-0 group-hover:opacity-100 p-2 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all focus:opacity-100"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
     </div>
   );
 }
