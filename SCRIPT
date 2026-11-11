@@ -1,49 +1,52 @@
-Speech Script (5-Minute Pitch)
+Final 5-Minute Pitch Script (Optimized & Integrated)
 [Slide 1: Title Slide] (0:00 - 0:35)
-"Hello everyone, and thank you for being here. I’m proud to introduce OurHome—a platform where data-driven technology meets profound human empathy. At its core,
-OurHome is engineered to redefine how we support individuals navigating Major Depressive Disorder, Generalized Anxiety, and ADHD. We are building this with two 
-clear global missions in mind: SDG 3 (Good Health and Well-being) and SDG 10 (Reduced Inequalities), by democratizing a highly sophisticated, yet completely 
-pressure-free mental health tool."
+"Hello everyone, and thank you for being here. I’m proud to introduce OurHome—a platform where structured data telemetry and machine learning meet profound 
+human empathy. Engineered to support individuals managing Major Depressive Disorder, Anxiety, and ADHD, OurHome is built to fulfill SDG 3 (Good Health and 
+Well-being) and SDG 10 (Reduced Inequalities) by democratizing a pressure-free, intelligent mental health support ecosystem."
 
-[Slide 2: The Philosophy & SDGs] (0:35 - 1:25)
-"To understand OurHome, we have to look at the sociology of 'Affective Presencing' and 'Co-Mobility.' Research shows that for someone experiencing executive 
-dysfunction, standard 'active' care is actually harmful. When a loved one texts, 'Did you eat?' or 'How are you?', it demands a cognitive response. It induces 
-guilt, pressure, and ultimately, withdrawal.
-The solution is Passive Co-Presence. In physical psychology, this is called 'Body Doubling'—sharing a room in silence to create motivation and safety. Our 
-mission was to figure out how to digitize that exact psychological safety net across distances."
+[Slide 2: The Philosophy, Distance & SDGs] (0:35 - 1:25)
+"To understand OurHome, we must first address a universal human challenge: supporting loved ones who are physically not by our side. Whether it’s a partner 
+across cities, a family member far away, or a friend going through burnout, distance breaks natural bonds.
+When we try to bridge this gap with standard communication, it often backfires. For someone experiencing executive dysfunction, an incoming text asking 'Did 
+you eat?' or 'How are you?' demands an active cognitive response. It induces guilt, pressure, and social withdrawal.
+That’s why we adopted the sociological concepts of 'Affective Presencing' and virtual 'Body Doubling'. In physical psychology, sharing a quiet room creates 
+safety. Our mission was to digitize that psychological safety net across distance, allowing us to be there for each other without demanding energy."
 
-[Slide 3: Structured Interaction Data] (1:25 - 2:15)
-"We achieved this by building a sophisticated data engine. OurHome doesn't ask the user how they feel; it learns it. We capture highly structured time-series 
-metrics.
-First, Routine Kinetics: We log the exact timestamps of micro-habit completions, like hydration or making the bed.
-Second, Ambient Engagement: We track the duration and frequency of silent profile views. When someone just opens the app to look at their partner's routine—that
-is virtual body doubling.
-Third, Micro-Cue Telemetry: We analyze non-verbal interactions, like the exact moment a user triggers a virtual 'Send Hug' signal. This gives us a rich, 
-tabular dataset of human behavior."
+[Slide 3: Structured Interaction Data & Sources] (1:25 - 2:15)
+"To achieve this, OurHome functions as a smart data engine. The application collects three layers of non-invasive, structured time-series telemetry:
+First, Routine Kinetics: Timestamped logs of micro-habit completions, tracking when and how frequently a user interacts with basic self-care.
+Second, Ambient Engagement: Tracking the duration and frequency of silent profile views—quantifying when a user opens the app simply to look at their partner's 
+routine as a form of digital proximity.
+Third, Micro-Cue Telemetry: Analyzing the frequency and clustering of non-verbal interactions, such as the one-click 'Send Hug' floating animations.
+
+When it comes to our data sources, we look beyond just basic application clicks. While our primary source is the real-time, in-app telemetry captured via 
+Firebase—such as routine kinetics and ambient view durations—we also integrate secondary behavioral benchmarks. We utilize anonymized Ecological Momentary 
+Assessment (EMA) open datasets from mental health research to validate our predictive models. Furthermore, looking at our roadmap within the Samsung ecosystem, 
+we plan to incorporate passive physiological telemetry from wearables like Galaxy Watches—such as heart rate variability and sleep tracking—to make our anomaly 
+detection even more precise, all while maintaining absolute user privacy."
 
 [Slide 4: Machine Learning Implementation] (2:15 - 3:15)
-"This dataset is the lifeblood of our Machine Learning architecture. Because we are dealing with structured time-series data rather than images or audio, we 
-don't need heavy deep learning. We apply highly interpretable algorithms like Random Forest and XGBoost.
-What does the AI actually do?
+"This brings us to the core technical innovation of OurHome: how we utilize Machine Learning.
+Because our input data consists of structured time-series metrics rather than unstructured video or audio, we implement robust, highly interpretable classifiers
+like Random Forest and XGBoost.
+The AI model operates invisibly behind the scenes in three distinct ways:
 
-Anomaly & Energy Detection: The model infers depressive or high-anxiety phases by recognizing temporal shifts—like a sudden drop in ambient engagement or 
-delayed habit logging.
+Anomaly & Energy Inference: By analyzing temporal shifts—such as a sudden decrease in habit logging rates or a drop in ambient view frequencies—the model detects 
+latent indicators of high cognitive load or depressive phases.
 
-Adaptive UI Scaling: When the algorithm detects high cognitive load, it dynamically simplifies the user interface. It hides complex tasks and surfaces only 
-the most vital, basic micro-steps to prevent overwhelming the user.
+Adaptive UI Scaling: When the model infers a low-energy window, it instructs the frontend to dynamically scale down UI density. It hides complex features and 
+surfaces only fundamental, 1-click micro-steps, preventing cognitive overwhelm.
 
-Algorithmic Nudging: The model predicts the optimal emotional window for a caregiver to send a silent support cue, ensuring connection happens when it is 
-needed most."
+Algorithmic Nudging: The model computes the optimal psychological window for a distant caregiver or partner to send a silent support cue, ensuring empathy arrives
+precisely when needed without triggering anxiety."
 
 [Slide 5: The Human Interface] (3:15 - 4:05)
-"All of this complex data processing results in a beautifully simple, Zero-Expectation UI. The interface is divided into Personal and Shared spaces.
-Because mental fatigue makes typing and decision-making difficult, everything operates on 1-click presets. The user doesn't write tasks; they simply tap 
-pre-populated micro-steps. Everything syncs in real-time via Firebase, providing immediate, silent visual feedback. I check a box; my partner sees it miles 
-away. We are connected, without saying a word."
+"All of this complex AI processing translates into a beautifully simple, Zero-Expectation UX. Divided into Personal and Shared spaces, the interface bypasses 
+mental fatigue entirely through pre-populated 1-click micro-presets. The user doesn’t have to type or think of tasks from scratch. Powered by real-time Firebase 
+synchronization, when one user checks off a step, the partner receives immediate, silent visual confirmation miles away. We are connected, without saying a word."
 
 [Slide 6: Ethical & Clinical Boundaries] (4:05 - 5:00)
-"Finally, because we are dealing with behavioral data, our ethical boundaries are absolute. Our data pipeline is GDPR and HIPAA compliant, utilizing strict 
-anonymization with zero Personally Identifiable Information.
-Furthermore, we intentionally avoid diagnostic labels. OurHome is a supportive companion, not a clinical judge. We are using machine learning not to demand 
-productivity, but to remove pressure.
-Technology is at its best when it adapts to human vulnerability. That is what OurHome does. Thank you for your time."
+"Finally, our ethical architecture is non-negotiable. Our data pipeline is fully GDPR-compliant, utilizing strict anonymization with zero Personally Identifiable 
+Information (PII) exposed to the ML engine. We intentionally avoid clinical diagnostic labeling to prevent reinforcing psychological stigma.
+OurHome proves that advanced machine learning should not be used to demand corporate productivity, but to protect human vulnerability and foster genuine connection. 
+Thank you for your time."
